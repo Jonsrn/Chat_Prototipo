@@ -70,4 +70,28 @@ class ChatWindow(QMainWindow):
 
         self.setCentralWidget(main_widget)
 
+    def load_or_generate_mac(self):
+        mac_file = "mac_address.txt"
+        if os.path.exists(mac_file):
+            with open(mac_file, "r") as file:
+                return file.read().strip()
+        
+        mac_id = f"{random.randint(1000, 9999)}"
+        with open(mac_file, "w") as file:
+            file.write(mac_id)
+        return mac_id
+
+    def load_or_request_name(self):
+        name_file = "user_name.txt"
+        if os.path.exists(name_file):
+            with open(name_file, "r") as file:
+                return file.read().strip()
+        
+        name, ok = QInputDialog.getText(self, "Nome de Usuário", "Digite seu nome:")
+        if ok and name:
+            with open(name_file, "w") as file:
+                file.write(name)
+            return name
+        return "Usuário"
+
     
