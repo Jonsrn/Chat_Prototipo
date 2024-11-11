@@ -94,4 +94,32 @@ class ChatWindow(QMainWindow):
             return name
         return "Usuário"
 
+    def load_message_history(self, contact_name):
+        file_path = os.path.join(self.message_history_dir, f"{contact_name}_history.txt")
+        messages = []
+        if os.path.exists(file_path):
+            with open(file_path, "r") as file:
+                messages = file.readlines()
+        return messages
+
+    def save_message(self, contact_name, message):
+        file_path = os.path.join(self.message_history_dir, f"{contact_name}_history.txt")
+        with open(file_path, "a") as file:
+            file.write(message + "\n")
+
+    def send_message(self):
+        message = self.message_input.text()
+        if message and self.active_chat:
+            dest_mac = self.nome_para_mac.get(self.active_chat, "")
+            if dest_mac:
+                display_text = f"Você: {message}"
+                self.display_message(self.active_chat, display_text, True)
+                self.save_message(self.active_chat, display_text)
+
+                # Formata e envia a mensagem como JSON para o servidor
+                data = json.dumps({"type": "message", "dest": dest_mac, "content": message}) + '\n'
+                self.client_socket.sendall(data.encode())
+                self.message_input.clear()
+
+
     
