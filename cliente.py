@@ -179,3 +179,50 @@ class ChatWindow(QMainWindow):
         for name in self.nome_para_mac:
             item_text = f"{name} (Novo)" if self.unread_messages.get(name) else name
             self.client_list_widget.addItem(item_text)
+    def get_chat_tab(self, contact_name):
+        index = self.chat_tabs.indexOf(self.chat_tabs.findChild(QTextEdit, contact_name))
+        if index != -1:
+            return self.chat_tabs.widget(index)
+
+        # Criar nova aba se não existir
+        tab = QTextEdit()
+        tab.setReadOnly(True)
+        tab.setObjectName(contact_name)
+        self.chat_tabs.addTab(tab, contact_name)
+
+        # Carregar histórico na nova aba
+        messages = self.load_message_history(contact_name)
+        for message in messages:
+            self.display_message(contact_name, message.strip(), "Você:" in message)
+        return tab
+
+    def change_chat(self, item):
+        contact_name = item.text().replace(" (Novo)", "")
+        self.unread_messages[contact_name] = False
+        self.active_chat = contact_name
+        self.update_client_list_display()
+        self.chat_tabs.setCurrentWidget(self.get_chat_tab(contact_name))
+        
+        # Exibir mensagens pendentes (não lidas) na aba ativa
+        if contact_name in self.pending_messages:
+            for msg in self.pending_messages[contact_name]:
+                self.display_message(contact_name, msg)
+            del self.pending_messages[contact_name]  # Limpar as mensagens pendentes
+
+    def switch_tab(self, index):
+        widget = self.chat_tabs.widget(index)
+        if widget:
+            self.active_chat = widget.objectName()
+            self.update_client_list_display()
+            
+            # Exibir mensagens pendentes ao mudar para a aba
+            if self.active_chat in self.pending_messages:
+                for msg in self.pending_messages[self.active_chat]:
+                    self.display_message(self.active_chat, msg)
+                del self.pending_messages[self.active_chat]  # Limpar as mensagens pendentes
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = ChatWindow()
+    window.show()
+    sys.exit(app.exec_())
