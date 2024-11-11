@@ -155,3 +155,14 @@ def handle_client(conn, addr):
 
     # Atualizar a lista de clientes e enviar para todos
     send_client_list()
+
+# Configurar e iniciar o servidor
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+    server_socket.bind((HOST, PORT))
+    server_socket.listen()
+    print("Servidor rodando...")
+
+    while True:
+        conn, addr = server_socket.accept()
+        client_thread = threading.Thread(target=handle_client, args=(conn, addr), daemon=True)
+        client_thread.start()

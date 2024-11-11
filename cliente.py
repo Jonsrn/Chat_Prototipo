@@ -120,6 +120,62 @@ class ChatWindow(QMainWindow):
                 data = json.dumps({"type": "message", "dest": dest_mac, "content": message}) + '\n'
                 self.client_socket.sendall(data.encode())
                 self.message_input.clear()
-
+                
 
     
+    def display_message(self, contact_name, message, is_self=False):
+        # Encontra ou cria a aba de chat para o contato
+        tab = self.get_chat_tab(contact_name)
+        if is_self:
+            # Alinha mensagens enviadas à direita
+            tab.append(f"<p style='color:blue; text-align:right;'>{message}</p>")
+        else:
+            # Alinha mensagens recebidas à esquerda
+            tab.append(f"<p style='color:green; text-align:left;'>{message}</p>")
+
+    def receive_messages(self):
+        buffer = ''
+        while True:
+            try:
+                data = self.client_socket.recv(1024).decode()
+                if not data:
+                    break
+                buffer += data
+                while '\n' in buffer:
+                    message, buffer = buffer.split('\n', 1)
+                    self.process_message(message)
+            except Exception as e:
+                print(f"Erro ao receber mensagem: {e}")
+                break
+
+    def process_message(self, message):
+        data = json.loads(message)
+        
+        if data["type"] == "client_list":
+            self.update_client_list(data["clients"])
+        
+        elif data["type"] == "message":
+            sender_mac = data["sender"]
+            sender_name = next((name for name, mac in self.nome_para_mac.items() if mac == sender_mac), sender_mac)
+            display_text = f"{sender_name}: {data['content']}"
+            self.save_message(sender_name, display_text)
+
+            if sender_name != self.active_chat:
+                # Armazena a mensagem como não lida se a aba não estiver ativa
+                if sender_name not in self.pending_messages:
+                    self.pending_messages[sender_name] = []
+                self.pending_messages[sender_name].append(display_text)
+                self.unread_messages[sender_name] = True
+                self.update_client_list_display()
+            else:
+                self.display_message(sender_name, display_text)
+
+    def update_client_list(self, clients):
+        self.nome_para_mac = {client["name"]: client["mac"] for client in clients if client["mac"] != self.mac_id}
+        self.update_client_list_display()
+
+    def update_client_list_display(self):
+        self.client_list_widget.clear()
+        for name in self.nome_para_mac:
+            item_text = f"{name} (Novo)" if self.unread_messages.get(name) else name
+            self.client_list_widget.addItem(item_text)
